@@ -1,0 +1,46 @@
+# ---- R / RStudio ----
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+.Rapp.history
+
+# ---- R Markdown / Notebooks ----
+*.utf8.md
+*.knit.md
+*.nb.html
+*_cache/
+cache/
+*.Rproj
+
+# ---- macOS system files ----
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---- IDE / logs ----
+.Rproj.user
+*.log
+
+# ---- Temp files ----
+*.tmp
+*.bak
+*.swp
+*.swo
+~$*
+
+# ---- Shiny / output ----
+rsconnect/
+shinyapps.io/
+*.html
+*.rds
+
+# ---- Data ---- 
+*.csv
+*.tsv
+*.rda
+*.rds
+**/data/`
+
+# ---- Private  ----
+**/private/
