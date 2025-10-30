@@ -1,124 +1,115 @@
-Dockerize: ds-shiny-tools
---------------------------------------------------------
+# 📊 Shiny Demographic & Persona Dashboard
 
-author: brandon.wang@catalina.com  
-Dockerize the repo: https://bitbucket.org/cameosaas/ds-shiny-tools/admin  
-Update: 2020-05-20  
+This repository contains a **Shiny web application** for visualizing demographic data, personas, and related analytics. The app provides an interactive interface for exploring key indicators, visual summaries, and downloadable reports through a clean and responsive UI.
 
---------------------------------------------------------
+---
 
-Document the process to create the docker image and deploy ds-shiny-tools.
-We have two deployment approach:
-* VM
-* Azure Container Instance 
+## 🚀 Features
 
---------------------------------------------------------
+- **Interactive Landing Page:**  
+  Navigate between demographics, persona insights, and additional visual modules.
 
-## Prepare Docker Images
-Use docker as a tool to deploy shiny app is very continent. First, we create a docker image which could work as shiny server
-for the shiny app. Then we deploy the images to a registry to hold a container. Now we can use the IP address to access the app. 
+- **Dynamic Visualizations:**  
+  Interactive plots, tables, and UI elements built using Shiny reactive programming.
 
-### Dockerfile
+- **Custom Styling:**  
+  A clean, professional look powered by `styles.css`, including hover effects, responsive layouts, and consistent theming.
 
-* We use `rocker/shiny-verse` as the base images, which is a shiny server image with tidyverse package installed
-* The image will create an environment based on Debian
-* Copy the `ds-shiny-tools` into the image folder `/srv/shiny-server/`
-* Connection to Yellowbrick (DB)
-    * Install `odbc-postgresql`
-    * Load data sources credential (`odbc.ini`) to the image
-    * Use IP address instead of hostname
-* Connection to Cameo Dropbox
-    * Install `openssh-client` package to use `scp` to upload file
-    * Load private key and known_hosts to the image
-    * Need to use `chown` and `chmod` to allow access
-        * Shiny is running on user `shiny` not `root`
-* Copy the `shiny-server.conf` to the image
-    * Control the configuration for the shiny server
-* Port to 80    
+- **Downloadable Data:**  
+  Export tables and plots using download buttons styled with `.down` class.
 
-### Modify `ds-shiny-tools` for Docker Deployment
+- **Modular Structure:**  
+  Each component (Demographics, Persona, etc.) is modularized for maintainability.
 
-* Change RDS files location and upload separately
-    * RDS files should not be packaged along with the docker images. Instead we are using volume mount.
-    * Upload RDS to VM (_zaprshinyvm1:10.165.27.68_) `/shiny_data`
-    * Change the RDS address to the pattern `/data/rds/...`
-* Update codes in `/modules/cameoPage.R` 
-    * Use IP address instead of hostname for Cameo dropbox
+---
 
---------------------------------------------------------
-## Build a local image to test
+## 🧩 Repository Structure
 
-Build and run the docker images
-
-`/data_docker` should be a local folder containing a sub-folder `/rds`, which has all input rds data files in total.
-
-* mount `/data_docker` to `/data` to load RDS (Mac Version via Terminal)
-```shell
-docker build -t shiny .
-docker run -d -p 80:80 -v /Users/bwang/data_docker:/data shiny
 ```
-The site can be tested locally on `localhost/ds-shiny-tools/`.
-
-* mount `/data_docker` to `/data` to load RDS (Windows Version via PowerShell)
-```shell
-docker build -t shiny .
-docker run -d -p 80:80 -v C:\Users\qfan\Documents\data_docker:/data shiny
+.
+├── global.R              # Loads libraries, global variables, and data sources
+├── ui.R                  # Defines the main UI layout and navigation
+├── server.R              # Contains server logic and reactivity
+├── demographicsPageNew.R # Module for demographics data and visualizations
+├── personaPage.R         # Module for persona-level insights
+├── styles.css            # Custom CSS for styling the UI
+└── README.md             # Documentation (this file)
 ```
 
-* Testing or debugging
-```shell
-docker ps # find the container id
-docker exec -it container_id /bin/bash # interactive mode
+---
+
+## ⚙️ Installation & Setup
+
+### Prerequisites
+
+- **R ≥ 4.1**
+- **Shiny ≥ 1.7**
+- Recommended packages:
+  ```r
+  install.packages(c(
+    "shiny", "tidyverse", "plotly", "DT", "shinythemes",
+    "shinydashboard", "readr", "dplyr", "ggplot2"
+  ))
+  ```
+
+### Running the App
+
+Clone the repository and run:
+
+```r
+# In R console
+library(shiny)
+runApp("path/to/this/repo")
 ```
-refer to log information in `/var/log/shiny-server` for debugging
 
-Stop the docker images
-```shell
-docker ps # find the container id
-docker stop container_id
+Or directly from within RStudio:
+
+```r
+shiny::runApp()
 ```
 
---------------------------------------------------------
-## Deployment
+---
 
-### Deploy on VM (_zaprshinyvm1:10.165.27.68_)
+## 🎨 UI & Styling
 
-```shell
-# upload files from local to remote
-scp -r ~/data_docker/data/rds/* shinyuser@10.165.27.68:/shiny_data/rds/
+The `styles.css` file defines consistent design rules across the app:
+- `.landing-page-box`, `.landing-page-icon`: hover-enabled cards with icons  
+- `.depr-text-box`: styled informational boxes  
+- `.down`: custom buttons for downloads  
+- `.navbar`, `.well`, `.definitionbox`: styled navigation and layout elements  
 
-# build docker images
-docker build -t shiny .
-docker run -d -p 10.165.27.68:80:80 -v /shiny_data:/data shiny
-```
+---
 
-Access to the shiny app [http://10.165.27.68/ds-shiny-tools/](http://10.165.27.68/ds-shiny-tools/)
+## 🧠 Modules Overview
 
-### Deploy on Catalina Azure Container Registry (ACR)
+| Module | File | Description |
+|--------|------|--------------|
+| **Demographics** | `demographicsPageNew.R` | Displays demographic data summaries and charts |
+| **Persona** | `personaPage.R` | Visualizes personas and behavioral patterns |
+| **Global** | `global.R` | Defines global variables, functions, and loads data |
+| **Server/UI** | `server.R` / `ui.R` | Core Shiny logic and layout definition |
 
-* Access credentials to Catalina ACR are configured for shinyuser@10.165.27.68  
-* Build the images and testing before pull the images since we don't have permission to delete images from ACR
-* ACR does not allow to map ports.
-* Tag and then pull to ACR
-    * project: datasolutions
-    * image: shiny
+---
 
-```shell
-docker tag shiny:latest catalina.azurecr.io/datasolutions/shiny:v1
-docker push catalina.azurecr.io/datasolutions/shiny:v1
-```
-* Access to the shiny app: [http://10.165.143.132/ds-shiny-tools/](http://10.165.143.132/ds-shiny-tools/)
-* Manage container Instance: email brandon.wang@catalina.com for access. 
-* File folders to load RDS data: email brandon.wang@catalina.com for access. 
+## 📁 Data Inputs
 
+You can connect the app to your data by updating the **data loading section** in `global.R`. Ensure CSVs or APIs used are accessible in your environment.
 
---------------------------------------------------------
-## Pipeline: updating shiny app 
+---
 
-1. Update code in [ds-shiny-tools](https://bitbucket.org/cameosaas/ds-shiny-tools/src/master/)
-    * add `README.md` to notice user about the change
-    * need to create a folder at `/data`
-2. Load files to [docker-ds-portal](https://bitbucket.org/cameosaas/docker-ds-portal/src/master/)
-3. Login *shinyuser@10.165.27.68* to build a new image to test
-    * Folder: `/home/shinyuser/docker-ds-shiny-tools`
-4. Tag and then push the image to ACR
+## 🧪 Development Notes
+
+- CSS errors are suppressed in Shiny using:
+  ```css
+  .shiny-output-error { visibility: hidden; }
+  .shiny-output-error:before { visibility: hidden; }
+  ```
+- Follows modular design principles — easy to extend with new pages.
+- Supports deployment on [shinyapps.io](https://www.shinyapps.io/) or internal Shiny Server.
+
+---
+
+## 🙌 Acknowledgments
+
+- Built with ❤️ using [R Shiny](https://shiny.posit.co/).  
+- Inspired by public health and demographic visualization dashboards.
